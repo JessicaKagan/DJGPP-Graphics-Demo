@@ -4,6 +4,7 @@
 #include <go32.h>
 #include <sys/farptr.h>
 #include <pc.h>
+#include <dos.h> //For now, just used for delays.
 
 //Code from a tutorial on the DJGPP website.
 void set_mode_13h()
@@ -57,6 +58,7 @@ int main(int argc, char **argv)
     //You could follow this up by defining a 'default' palette and maybe some subpalettes.
     //Not reading the registers (0x3C7) might create a performance penalty, though.
     int currentPalette[256][4];
+    char defaultPalette[768];
     for(int i = 0; i < 256; ++i ){
       currentPalette[i][0] = i;
       currentPalette[i][1] = i%64;
@@ -64,17 +66,41 @@ int main(int argc, char **argv)
       currentPalette[i][3] = (i + 63)%64;
       //printf("%d %d %d %d \n", currentPalette[i][0], currentPalette[i][1], currentPalette[i][2], currentPalette[i][3]);
     }
+    //Just a test.
+    
+    void get_palette(char * pal){
+      outportb(0x3c7, 0);
+      for(int i = 0; i < 768; ++i){
+      pal[i] = inportb(0x3c9); 
+      }
+    }
 
+    set_mode_13h();
+
+    get_palette(defaultPalette);
+    /*
+    for(int i = 0; i < 768; i+=3){
+      printf("%d %d %d \n", defaultPalette[i], defaultPalette[i+1],defaultPalette[i+2]);
+    } 
+    */
     char str[10];
     printf("Is this not nifty?\n");
     gets(str); //I need a better "Press ENTER to continue" condition.
 
-    set_mode_13h();
+    
 
-    //First we draw a rectangle in every default color.
+    //First we "fill" the screen in every default color.
+    rectangle_13h(0, 0, 320, 200, 0);
+    /*Instead of manually painting a new rectangle each time,
+      we change the palette of the current one.
+      This is so much faster than calling new rectangle calls
+      that a delay has to be implemented in order to render the effect visible.
+    */
     for(int i = 0; i < 255; ++i){
-      rectangle_13h(0, 0, 320, 200, i);
+        set_color(0, defaultPalette[i*3],defaultPalette[(i*3)+1],defaultPalette[(i*3)+2]);
+        delay(1000/60); //~16 milliseconds per frame. A more robust program would make this more dynamic.
     }
+    set_color(0, 0, 0, 0); //Reset the color to default black after we're done.
     printf("Let's have more than one color\n on the screen now.\n");
     gets(str);   
 
